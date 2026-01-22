@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useUser, useIsLoggedIn, useAuthActions, PLATFORM_FEE_PERCENT } from '../state/authState';
 import { eventApi } from '../api/eventApi';
 import { paymentApi, openRazorpayCheckout } from '../api/paymentApi';
-import type { LiveEvent, TicketTier, AddOn, CustomQuestion, QuestionResponse, PlusOne, AttendeeAddOn } from '../types/event';
+import type { LiveEvent, TicketTier, QuestionResponse, PlusOne, AttendeeAddOn } from '../types/event';
 import { formatPrice, formatMoney, formatUSD, getUserCurrency, convertFromUSD } from '../utils/currency';
 
 type JoinEventModalProps = {
@@ -334,8 +334,8 @@ export function JoinEventModal({ event, isOpen, onClose, onSuccess }: JoinEventM
         };
       });
 
-      // Prepare join data
-      const joinData = {
+      // Prepare join data (for future API extension)
+      const _joinData = {
         ticketTierId: selectedTier?.id,
         ticketTierName: selectedTier?.name,
         ticketCount,

@@ -30,7 +30,7 @@ export function EventDetailsCard() {
     setSaving(false);
   }
 
-  function handleKeyDown(e: React.KeyboardEvent, fieldId: FieldKey) {
+  function handleKeyDown(e: React.KeyboardEvent, _fieldId: FieldKey) {
     if (e.key === 'Enter') {
       (e.target as HTMLInputElement).blur();
     }

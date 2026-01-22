@@ -376,7 +376,7 @@ export const eventApi = {
   },
 
   // Get events hosted by user
-  getHostedEvents: async (userId: string): Promise<{ ok: true; data: LiveEvent[] } | { ok: false; error: string }> => {
+  getHostedEvents: async (_userId: string): Promise<{ ok: true; data: LiveEvent[] } | { ok: false; error: string }> => {
     const result = await apiCall<{ events: Record<string, unknown>[] }>('/events/user/hosted');
     
     if (!result.ok) return result;
@@ -388,7 +388,7 @@ export const eventApi = {
   },
 
   // Get events user is attending
-  getAttendingEvents: async (userId: string): Promise<{ ok: true; data: LiveEvent[] } | { ok: false; error: string }> => {
+  getAttendingEvents: async (_userId: string): Promise<{ ok: true; data: LiveEvent[] } | { ok: false; error: string }> => {
     const result = await apiCall<{ events: Record<string, unknown>[] }>('/events/user/attending');
     
     if (!result.ok) return result;
@@ -400,7 +400,7 @@ export const eventApi = {
   },
 
   // Update event
-  updateEvent: async (eventId: string, hostId: string, updates: Partial<Pick<LiveEvent, 'name' | 'description' | 'dateTime' | 'location' | 'capacity' | 'costPerPerson' | 'category' | 'tags' | 'isPrivate' | 'flyerUrl'>>): Promise<{ ok: true; data: LiveEvent } | { ok: false; error: string }> => {
+  updateEvent: async (eventId: string, _hostId: string, updates: Partial<Pick<LiveEvent, 'name' | 'description' | 'dateTime' | 'location' | 'capacity' | 'costPerPerson' | 'category' | 'tags' | 'isPrivate' | 'flyerUrl'>>): Promise<{ ok: true; data: LiveEvent } | { ok: false; error: string }> => {
     const result = await apiCall<{ event: Record<string, unknown> }>(`/events/${eventId}`, {
       method: 'PUT',
       body: JSON.stringify({
@@ -418,7 +418,7 @@ export const eventApi = {
   },
 
   // Update host profile (syncs across events)
-  updateHostProfile: async (hostId: string, updates: { name?: string; avatar?: string }): Promise<{ ok: true; data: { updated: number } } | { ok: false; error: string }> => {
+  updateHostProfile: async (_hostId: string, _updates: { name?: string; avatar?: string }): Promise<{ ok: true; data: { updated: number } } | { ok: false; error: string }> => {
     // This is handled automatically by the backend when user profile is updated
     return { ok: true, data: { updated: 0 } };
   },

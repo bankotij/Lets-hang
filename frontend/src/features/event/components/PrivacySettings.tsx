@@ -18,7 +18,7 @@ export function PrivacySettings() {
   const draft = useEventDraft();
   const { updateDraft } = useEventDraftActions();
   const [isExpanded, setIsExpanded] = useState(false);
-  const [newEmail, setNewEmail] = useState('');
+  const [_newEmail, _setNewEmail] = useState('');
   
   const privacyType = draft.privacyType || 'public';
   const currentOption = PRIVACY_OPTIONS.find(o => o.value === privacyType);

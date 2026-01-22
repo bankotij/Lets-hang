@@ -7,7 +7,7 @@ import { HeaderUserMenu } from '../../components/HeaderUserMenu';
 import { JoinEventModal } from '../../components/JoinEventModal';
 import { ShareEventModal } from '../../components/ShareEventModal';
 import { useUser, useIsLoggedIn, PLATFORM_FEE_PERCENT } from '../../state/authState';
-import { formatPrice, formatMoney, formatPriceRange, getUserCurrency } from '../../utils/currency';
+import { formatPrice, formatMoney, formatPriceRange } from '../../utils/currency';
 
 const CATEGORIES = [
   { value: 'party', label: 'Party', emoji: '🎉' },
@@ -51,7 +51,7 @@ function formatEventDateTime(dateString: string) {
 export function EventDetailPage() {
   const { id } = useParams<{ id: string }>();
   const user = useUser();
-  const isLoggedIn = useIsLoggedIn();
+  const _isLoggedIn = useIsLoggedIn();
   const [event, setEvent] = useState<LiveEvent | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

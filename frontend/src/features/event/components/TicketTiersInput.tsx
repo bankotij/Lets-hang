@@ -137,7 +137,7 @@ export function TicketTiersInput() {
             <>
               {/* Tiers List */}
               <div className="space-y-3">
-                {tiers.map((tier, index) => (
+                {tiers.map((tier) => (
                   <div 
                     key={tier.id}
                     className="rounded-xl border border-white/10 overflow-hidden"

@@ -115,7 +115,7 @@ export function ShareEventModal({ isOpen, onClose, eventName, eventUrl, eventDes
           </div>
 
           {/* Native share button (mobile) */}
-          {typeof navigator !== 'undefined' && navigator.share && (
+          {typeof navigator !== 'undefined' && 'share' in navigator && (
             <button
               type="button"
               onClick={handleNativeShare}

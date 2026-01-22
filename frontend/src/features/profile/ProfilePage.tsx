@@ -27,7 +27,7 @@ export function ProfilePage() {
   const user = useUser();
   const isLoggedIn = useIsLoggedIn();
   const { updateProfile, logout } = useAuthActions();
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
 
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
