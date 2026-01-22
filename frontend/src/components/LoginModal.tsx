@@ -22,6 +22,7 @@ export function LoginModal() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(0);
+  const [devOtp, setDevOtp] = useState<string | null>(null);
   
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const otpInputRef = useRef<HTMLInputElement>(null);
@@ -60,6 +61,7 @@ export function LoginModal() {
     setError(null);
     setMessage(null);
     setIsLoading(false);
+    setDevOtp(null);
   }
 
   if (!isOpen) return null;
@@ -121,6 +123,10 @@ export function LoginModal() {
       setMessage(result.data.message);
       setMode('verify');
       setCountdown(60);
+      // Store devOtp if email is disabled
+      if (result.data.devOtp) {
+        setDevOtp(result.data.devOtp);
+      }
     } else {
       setError(result.error || 'Signup failed');
     }
@@ -165,9 +171,13 @@ export function LoginModal() {
     } else if (result.data?.needsVerification && result.data?.userId) {
       // Needs email verification
       setUserId(result.data.userId);
-      setMessage('Please verify your email. A new code has been sent.');
+      setMessage(result.data.message || 'Please verify your email. A new code has been sent.');
       setMode('verify');
       setCountdown(60);
+      // Store devOtp if email is disabled
+      if (result.data.devOtp) {
+        setDevOtp(result.data.devOtp);
+      }
     } else {
       setError(result.error || 'Sign in failed');
     }
@@ -230,8 +240,12 @@ export function LoginModal() {
     const result = await authApi.resendOtp(userId);
 
     if (result.success) {
-      setMessage('New verification code sent!');
+      setMessage(result.data?.message || 'New verification code sent!');
       setCountdown(60);
+      // Store devOtp if email is disabled
+      if (result.data?.devOtp) {
+        setDevOtp(result.data.devOtp);
+      }
     } else {
       setError(result.error || 'Failed to resend code');
     }
@@ -276,19 +290,37 @@ export function LoginModal() {
         {mode === 'verify' && (
           <>
             <div className="text-center mb-6">
-              <div className="text-5xl mb-3">📧</div>
-              <h2 className="text-white text-2xl font-bold mb-2">Check Your Email</h2>
+              <div className="text-5xl mb-3">{devOtp ? '🔐' : '📧'}</div>
+              <h2 className="text-white text-2xl font-bold mb-2">
+                {devOtp ? 'Verify Your Account' : 'Check Your Email'}
+              </h2>
               <p className="text-white/50 text-sm">
-                We sent a 6-digit code to <span className="text-purple-400">{email}</span>
+                {devOtp 
+                  ? 'Enter the verification code below'
+                  : <>We sent a 6-digit code to <span className="text-purple-400">{email}</span></>
+                }
               </p>
             </div>
+
+            {/* Dev OTP Display - shown when email is disabled */}
+            {devOtp && (
+              <div className="mb-4 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-amber-400 text-sm font-medium">⚠️ Email disabled in production</span>
+                </div>
+                <p className="text-white/60 text-xs mb-3">Use this code to verify:</p>
+                <div className="bg-black/30 rounded-lg p-3 text-center">
+                  <span className="text-2xl font-mono font-bold text-amber-400 tracking-[0.3em]">{devOtp}</span>
+                </div>
+              </div>
+            )}
 
             {error && (
               <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
                 {error}
               </div>
             )}
-            {message && (
+            {message && !devOtp && (
               <div className="mb-4 p-3 rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 text-sm">
                 {message}
               </div>
@@ -327,7 +359,9 @@ export function LoginModal() {
             </form>
 
             <div className="mt-6 text-center">
-              <p className="text-white/50 text-sm mb-2">Didn't receive the code?</p>
+              <p className="text-white/50 text-sm mb-2">
+                {devOtp ? 'Need a new code?' : "Didn't receive the code?"}
+              </p>
               <button
                 type="button"
                 onClick={handleResendOtp}

@@ -50,6 +50,8 @@ export type SignupResponse = {
   success: boolean;
   message: string;
   userId: string;
+  devOtp?: string;
+  emailDisabled?: boolean;
 };
 
 export type VerifyOtpResponse = {
@@ -66,6 +68,8 @@ export type SigninResponse = {
   user?: User;
   userId?: string;
   needsVerification?: boolean;
+  devOtp?: string;
+  emailDisabled?: boolean;
 };
 
 export type User = {
@@ -105,7 +109,7 @@ export const authApi = {
 
   // Resend OTP
   resendOtp: (userId: string) =>
-    apiCall<{ success: boolean; message: string }>('/auth/resend-otp', {
+    apiCall<{ success: boolean; message: string; devOtp?: string; emailDisabled?: boolean }>('/auth/resend-otp', {
       method: 'POST',
       body: JSON.stringify({ userId }),
     }),
