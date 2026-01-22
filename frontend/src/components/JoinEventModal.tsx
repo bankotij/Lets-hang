@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useUser, useIsLoggedIn, useAuthActions, PLATFORM_FEE_PERCENT } from '../state/authState';
 import { eventApi } from '../api/eventApi';
 import { paymentApi, openRazorpayCheckout } from '../api/paymentApi';
-import type { LiveEvent, TicketTier, QuestionResponse, PlusOne, AttendeeAddOn } from '../types/event';
+import type { LiveEvent, TicketTier, QuestionResponse, PlusOne } from '../types/event';
 import { formatPrice, formatMoney, formatUSD, getUserCurrency, convertFromUSD } from '../utils/currency';
 
 type JoinEventModalProps = {
@@ -323,17 +323,6 @@ export function JoinEventModal({ event, isOpen, onClose, onSuccess }: JoinEventM
     setStep('processing');
 
     try {
-      // Prepare add-ons data
-      const attendeeAddOns: AttendeeAddOn[] = Array.from(selectedAddOns.entries()).map(([id, qty]) => {
-        const addOn = event.addOns?.find(a => a.id === id);
-        return {
-          addOnId: id,
-          name: addOn?.name || '',
-          quantity: qty,
-          price: addOn?.price || 0,
-        };
-      });
-
       if (isPrivate) {
         const result = await eventApi.requestToJoin(event.id, {
           id: user.id,

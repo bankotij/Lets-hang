@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useUser, useIsLoggedIn, useAuthActions, PLATFORM_FEE_PERCENT } from '../../state/authState';
 import type { PaymentMethod, BankDetails } from '../../state/authState';
 import { HeaderUserMenu } from '../../components/HeaderUserMenu';
