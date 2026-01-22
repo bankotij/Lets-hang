@@ -334,18 +334,6 @@ export function JoinEventModal({ event, isOpen, onClose, onSuccess }: JoinEventM
         };
       });
 
-      // Prepare join data (for future API extension)
-      const _joinData = {
-        ticketTierId: selectedTier?.id,
-        ticketTierName: selectedTier?.name,
-        ticketCount,
-        addOns: attendeeAddOns,
-        responses,
-        plusOnes: plusOnes.filter(p => p.name.trim()),
-        groupName: groupName.trim() || undefined,
-        isGroupLeader: allowsGroupReg && groupMembers.length >= (event.minGroupSize || 2),
-      };
-
       if (isPrivate) {
         const result = await eventApi.requestToJoin(event.id, {
           id: user.id,
