@@ -166,7 +166,7 @@ export const eventApi = {
   },
 
   // Publish a new event
-  publishEvent: async (hostInfo: { id: string; name: string; avatar?: string }): Promise<{ ok: true; data: LiveEvent } | { ok: false; error: string }> => {
+  publishEvent: async (_hostInfo: { id: string; name: string; avatar?: string }): Promise<{ ok: true; data: LiveEvent } | { ok: false; error: string }> => {
     const draft = db.draft;
     
     if (!draft.name?.trim()) {
@@ -285,7 +285,7 @@ export const eventApi = {
   },
 
   // Join a public event
-  joinEvent: async (eventId: string, user: { id: string; name: string; avatar?: string }, paidAmount: number, paymentId?: string, ticketCount: number = 1): Promise<{ ok: true; data: { message: string } } | { ok: false; error: string }> => {
+  joinEvent: async (eventId: string, _user: { id: string; name: string; avatar?: string }, paidAmount: number, paymentId?: string, ticketCount: number = 1): Promise<{ ok: true; data: { message: string } } | { ok: false; error: string }> => {
     const result = await apiCall<{ message: string }>(`/events/${eventId}/join`, {
       method: 'POST',
       body: JSON.stringify({ paymentId, amountPaid: paidAmount, ticketCount }),
@@ -297,7 +297,7 @@ export const eventApi = {
   },
 
   // Request to join a private event
-  requestToJoin: async (eventId: string, user: { id: string; name: string; avatar?: string }, paidAmount: number, paymentId?: string): Promise<{ ok: true; data: { message: string } } | { ok: false; error: string }> => {
+  requestToJoin: async (eventId: string, _user: { id: string; name: string; avatar?: string }, paidAmount: number, paymentId?: string): Promise<{ ok: true; data: { message: string } } | { ok: false; error: string }> => {
     const result = await apiCall<{ message: string }>(`/events/${eventId}/request`, {
       method: 'POST',
       body: JSON.stringify({ paymentId, amountPaid: paidAmount }),
@@ -309,7 +309,7 @@ export const eventApi = {
   },
 
   // Check user's status for an event
-  getUserEventStatus: async (eventId: string, userId: string): Promise<{ ok: true; data: { status: 'host' | 'joined' | 'pending' | 'none'; attendee?: Attendee } } | { ok: false; error: string }> => {
+  getUserEventStatus: async (eventId: string, _userId: string): Promise<{ ok: true; data: { status: 'host' | 'joined' | 'pending' | 'none'; attendee?: Attendee } } | { ok: false; error: string }> => {
     const result = await apiCall<{ status: 'host' | 'joined' | 'pending' | 'none'; attendee?: Record<string, unknown> }>(`/events/${eventId}/status`);
     
     if (!result.ok) return result;
@@ -332,7 +332,7 @@ export const eventApi = {
   },
 
   // Cancel attendance
-  cancelAttendance: async (eventId: string, userId: string): Promise<{ ok: true; data: { message: string; refundAmount: number; paymentId?: string } } | { ok: false; error: string }> => {
+  cancelAttendance: async (eventId: string, _userId: string): Promise<{ ok: true; data: { message: string; refundAmount: number; paymentId?: string } } | { ok: false; error: string }> => {
     const result = await apiCall<{ message: string; refundAmount: number; paymentId?: string }>(`/events/${eventId}/cancel`, {
       method: 'POST',
     });
@@ -343,7 +343,7 @@ export const eventApi = {
   },
 
   // Cancel join request
-  cancelJoinRequest: async (eventId: string, userId: string): Promise<{ ok: true; data: { message: string; refundAmount: number } } | { ok: false; error: string }> => {
+  cancelJoinRequest: async (eventId: string, _userId: string): Promise<{ ok: true; data: { message: string; refundAmount: number } } | { ok: false; error: string }> => {
     const result = await apiCall<{ message: string; refundAmount: number }>(`/events/${eventId}/cancel`, {
       method: 'POST',
     });
@@ -354,7 +354,7 @@ export const eventApi = {
   },
 
   // Mark event as completed
-  markEventCompleted: async (eventId: string, hostId: string): Promise<{ ok: true; data: { message: string } } | { ok: false; error: string }> => {
+  markEventCompleted: async (eventId: string, _hostId: string): Promise<{ ok: true; data: { message: string } } | { ok: false; error: string }> => {
     const result = await apiCall<{ message: string }>(`/events/${eventId}/complete`, {
       method: 'POST',
     });
@@ -365,7 +365,7 @@ export const eventApi = {
   },
 
   // Request payout
-  requestPayout: async (eventId: string, hostId: string): Promise<{ ok: true; data: { message: string; amount: number } } | { ok: false; error: string }> => {
+  requestPayout: async (eventId: string, _hostId: string): Promise<{ ok: true; data: { message: string; amount: number } } | { ok: false; error: string }> => {
     const result = await apiCall<{ message: string; amount: number }>(`/events/${eventId}/payout`, {
       method: 'POST',
     });
