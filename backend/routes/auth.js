@@ -44,13 +44,22 @@ router.post('/signup', async (req, res) => {
         await existingUser.save();
         
         // Send OTP email
-        await sendTemplateEmail(email, 'otp', { name, otp });
+        const emailResult = await sendTemplateEmail(email, 'otp', { name, otp });
         
-        return res.status(200).json({
+        const response = {
           success: true,
-          message: 'Verification code sent to your email',
+          message: emailResult.skipped 
+            ? 'Email is disabled - use the code shown below'
+            : 'Verification code sent to your email',
           userId: existingUser._id,
-        });
+        };
+        
+        if (emailResult.skipped) {
+          response.devOtp = otp;
+          response.emailDisabled = true;
+        }
+        
+        return res.status(200).json(response);
       }
     }
     
@@ -76,11 +85,22 @@ router.post('/signup', async (req, res) => {
       // Don't fail the signup, just log the error
     }
     
-    res.status(201).json({
+    // Build response
+    const response = {
       success: true,
-      message: 'Account created! Please check your email for the verification code',
+      message: emailResult.skipped 
+        ? 'Account created! Email is disabled - use the code shown below'
+        : 'Account created! Please check your email for the verification code',
       userId: user._id,
-    });
+    };
+    
+    // Include OTP in response if email was skipped (for dev/demo)
+    if (emailResult.skipped) {
+      response.devOtp = otp;
+      response.emailDisabled = true;
+    }
+    
+    res.status(201).json(response);
     
   } catch (error) {
     console.error('Signup error:', error);
@@ -200,12 +220,21 @@ router.post('/resend-otp', async (req, res) => {
     await user.save();
     
     // Send OTP email
-    await sendTemplateEmail(user.email, 'otp', { name: user.name, otp });
+    const emailResult = await sendTemplateEmail(user.email, 'otp', { name: user.name, otp });
     
-    res.json({
+    const response = {
       success: true,
-      message: 'New verification code sent!',
-    });
+      message: emailResult.skipped 
+        ? 'Email is disabled - use the code shown below'
+        : 'New verification code sent!',
+    };
+    
+    if (emailResult.skipped) {
+      response.devOtp = otp;
+      response.emailDisabled = true;
+    }
+    
+    res.json(response);
     
   } catch (error) {
     console.error('Resend OTP error:', error);
@@ -245,14 +274,23 @@ router.post('/signin', async (req, res) => {
       // Generate new OTP and send
       const otp = user.generateOTP();
       await user.save();
-      await sendTemplateEmail(user.email, 'otp', { name: user.name, otp });
+      const emailResult = await sendTemplateEmail(user.email, 'otp', { name: user.name, otp });
       
-      return res.status(403).json({
+      const response = {
         success: false,
-        message: 'Please verify your email first. A new code has been sent.',
+        message: emailResult.skipped 
+          ? 'Please verify your email first. Use the code shown below.'
+          : 'Please verify your email first. A new code has been sent.',
         userId: user._id,
         needsVerification: true,
-      });
+      };
+      
+      if (emailResult.skipped) {
+        response.devOtp = otp;
+        response.emailDisabled = true;
+      }
+      
+      return res.status(403).json(response);
     }
     
     // Check password

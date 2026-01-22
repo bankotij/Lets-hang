@@ -2,6 +2,11 @@ import nodemailer from 'nodemailer';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
+// Check if email is configured
+function isEmailConfigured() {
+  return !!(process.env.SMTP_USER && process.env.SMTP_PASS);
+}
+
 // Generate QR code URL
 function generateQRCodeUrl(data) {
   return `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(data)}&bgcolor=ffffff&color=000000`;
@@ -9,6 +14,9 @@ function generateQRCodeUrl(data) {
 
 // Create transporter
 function createTransporter() {
+  if (!isEmailConfigured()) {
+    return null;
+  }
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
     port: parseInt(process.env.SMTP_PORT || '587'),
@@ -207,6 +215,14 @@ export async function sendTicketEmail(ticketData) {
   const ticketId = `TKT-${eventId.slice(0, 8).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;
   const eventUrl = `${FRONTEND_URL}/event/${eventId}`;
   const qrCodeUrl = generateQRCodeUrl(eventUrl);
+
+  // If email not configured, log and return success (skip email)
+  if (!isEmailConfigured()) {
+    console.log(`📧 [EMAIL DISABLED] Would send ticket to ${attendeeEmail}`);
+    console.log(`   Ticket ID: ${ticketId}`);
+    console.log(`   Event: ${eventName}`);
+    return { success: true, ticketId, skipped: true };
+  }
 
   const ticketHTML = generateTicketHTML({
     eventName,

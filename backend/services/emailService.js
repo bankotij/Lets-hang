@@ -2,8 +2,16 @@ import nodemailer from 'nodemailer';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
+// Check if email is configured
+function isEmailConfigured() {
+  return !!(process.env.SMTP_USER && process.env.SMTP_PASS);
+}
+
 // Create transporter
 const createTransporter = () => {
+  if (!isEmailConfigured()) {
+    return null;
+  }
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
     port: parseInt(process.env.SMTP_PORT || '587'),
@@ -165,6 +173,15 @@ const templates = {
 
 // Send template email
 export async function sendTemplateEmail(to, template, data) {
+  // If email not configured, log and return success (skip email)
+  if (!isEmailConfigured()) {
+    console.log(`📧 [EMAIL DISABLED] Would send '${template}' email to ${to}`);
+    if (template === 'otp') {
+      console.log(`   OTP Code: ${data.otp} (for testing - email not configured)`);
+    }
+    return { success: true, skipped: true };
+  }
+
   try {
     const transporter = createTransporter();
     await transporter.verify();
@@ -204,6 +221,12 @@ export async function sendTemplateEmail(to, template, data) {
 // Send custom email
 export async function sendEmail(options) {
   const { to, subject, html, text } = options;
+
+  // If email not configured, log and return success (skip email)
+  if (!isEmailConfigured()) {
+    console.log(`📧 [EMAIL DISABLED] Would send email to ${to}: ${subject}`);
+    return { success: true, skipped: true };
+  }
   
   try {
     const transporter = createTransporter();
