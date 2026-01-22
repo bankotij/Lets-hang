@@ -5,10 +5,11 @@ import { EventDetailPage } from './features/search/EventDetailPage';
 import { EditEventPage } from './features/search/EditEventPage';
 import { ProfilePage } from './features/profile/ProfilePage';
 import { LoginModal } from './components/LoginModal';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 export default function App() {
   return (
-    <>
+    <ErrorBoundary>
       <Routes>
         <Route path="/" element={<Navigate to="/search" replace />} />
         <Route path="/create" element={<CreateEventPage />} />
@@ -18,6 +19,6 @@ export default function App() {
         <Route path="/profile" element={<ProfilePage />} />
       </Routes>
       <LoginModal />
-    </>
+    </ErrorBoundary>
   );
 }
