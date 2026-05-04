@@ -10,6 +10,10 @@ Let's Hang is a full-stack event discovery and hosting platform where users can 
 - Event discovery and search
 - Host earnings and payout management
 
+### Payouts & earnings (current limitation)
+
+**Demo-mode payouts:** Host payout scheduling uses **in-memory** maps for pending/completed payouts in the current codebase (`services/payoutService.js`). That keeps local demos simple but means payouts **do not survive restarts** and are **not audit-ready**. A production version should persist **`Payout`** (or equivalent) documents in **MongoDB**, add **reconciliation** with Razorpay transfers, and emit **audit logs** for money movement.
+
 ## 2. Architecture & Data Flow
 
 ```
@@ -152,6 +156,8 @@ npm run dev                      # http://localhost:5173
 
 ## 10. Scope & Limitations
 
+- Payout pipeline is **demo-oriented** (in-memory state); use MongoDB persistence + reconciliation before treating payouts as production-grade.
+- Automated tests are **not** included in this repo yet.
 - No real-time updates (polling-based)
 - Single currency (INR) for payments
 - No image hosting (base64 or external URLs only)
