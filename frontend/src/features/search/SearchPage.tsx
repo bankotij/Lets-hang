@@ -1,8 +1,9 @@
-import { useState, useEffect, useMemo, type CSSProperties } from 'react';
+import { memo, useState, useEffect, useMemo, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { eventApi } from '../../api/eventApi';
 import type { SearchFilters } from '../../api/eventApi';
 import { shouldPreferDemoCatalog } from '../../config/apiBase';
+import { filterDemoLiveEvents, getAllDemoLiveEvents } from '../../data/demoEvents';
 import type { LiveEvent } from '../../types/event';
 import { getCategoryCoverGradient } from '../../utils/categoryGradients';
 import { HeaderUserMenu } from '../../components/HeaderUserMenu';
@@ -47,7 +48,10 @@ function headerBackground(event: LiveEvent): CSSProperties {
   return { backgroundImage: g };
 }
 
-function EventCard({ event }: { event: LiveEvent }) {
+/** Stable demo-catalog flag for this build (env). */
+const USE_DEMO_CATALOG = shouldPreferDemoCatalog();
+
+const EventCard = memo(function EventCard({ event }: { event: LiveEvent }) {
   const capacityPercent = event.capacity
     ? Math.round((event.attendeeCount / event.capacity) * 100)
     : null;
@@ -55,7 +59,7 @@ function EventCard({ event }: { event: LiveEvent }) {
   return (
     <Link
       to={`/event/${event.id}`}
-      className="group relative flex flex-col bg-zinc-900/80 backdrop-blur-sm rounded-2xl overflow-hidden border border-white/10 hover:border-white/30 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-purple-500/20"
+      className="group relative flex flex-col bg-zinc-900/80 backdrop-blur-sm rounded-2xl overflow-hidden border border-white/10 hover:border-white/30 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-purple-500/20 [content-visibility:auto] [contain-intrinsic-size:auto_420px]"
     >
       {/* Image / gradient */}
       <div className="relative aspect-[4/3] overflow-hidden">
@@ -64,6 +68,9 @@ function EventCard({ event }: { event: LiveEvent }) {
             src={event.flyerUrl}
             alt={event.name}
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+            loading="lazy"
+            decoding="async"
+            fetchPriority="low"
           />
         ) : (
           <div
@@ -136,6 +143,9 @@ function EventCard({ event }: { event: LiveEvent }) {
                 src={event.hostAvatar}
                 alt={event.hostName}
                 className="w-7 h-7 rounded-full border border-white/20"
+                loading="lazy"
+                decoding="async"
+                fetchPriority="low"
               />
             ) : (
               <div className="w-7 h-7 rounded-full bg-purple-500 flex items-center justify-center text-white text-xs font-bold">
@@ -198,27 +208,44 @@ function EventCard({ event }: { event: LiveEvent }) {
       </div>
     </Link>
   );
-}
+});
 
 export function SearchPage() {
-  const [events, setEvents] = useState<LiveEvent[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [events, setEvents] = useState<LiveEvent[]>(() =>
+    USE_DEMO_CATALOG
+      ? filterDemoLiveEvents(getAllDemoLiveEvents(), { query: '', category: 'all' })
+      : [],
+  );
+  const [isLoading, setIsLoading] = useState(() => !USE_DEMO_CATALOG);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<SearchFilters['category']>('all');
   const [debouncedQuery, setDebouncedQuery] = useState('');
 
-  const showDemoHint = shouldPreferDemoCatalog();
+  const showDemoHint = USE_DEMO_CATALOG;
 
-  // Debounce search query
+  // Snappier search — demo filters locally so this stays responsive
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedQuery(searchQuery);
-    }, 300);
+    }, 120);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Fetch events (demo path resolves immediately; API path may take longer)
+  // Demo catalog: instant client-side filter (no network, no loading flashes)
   useEffect(() => {
+    if (!USE_DEMO_CATALOG) return;
+    setEvents(
+      filterDemoLiveEvents(getAllDemoLiveEvents(), {
+        query: debouncedQuery,
+        category: selectedCategory,
+      }),
+    );
+    setIsLoading(false);
+  }, [debouncedQuery, selectedCategory]);
+
+  // Real API: fetch; keep prior grid visible while refreshing (stale-while-revalidate)
+  useEffect(() => {
+    if (USE_DEMO_CATALOG) return;
     let cancelled = false;
 
     async function fetchEvents() {
@@ -235,11 +262,14 @@ export function SearchPage() {
       }
       setIsLoading(false);
     }
-    fetchEvents();
+    void fetchEvents();
     return () => {
       cancelled = true;
     };
   }, [debouncedQuery, selectedCategory]);
+
+  const showFullSkeleton = isLoading && events.length === 0;
+  const showRefreshing = isLoading && events.length > 0;
 
   const pageStyle = useMemo<React.CSSProperties>(() => ({
     background: 'linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)',
@@ -250,9 +280,9 @@ export function SearchPage() {
     <div style={pageStyle}>
       {/* Animated background particles */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-        <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl" />
       </div>
 
       <div className="relative z-10">
@@ -341,11 +371,13 @@ export function SearchPage() {
           {/* Results count */}
           <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
             <p className="text-white/50 text-sm">
-              {isLoading
+              {showFullSkeleton
                 ? 'Loading events…'
-                : `${events.length} event${events.length !== 1 ? 's' : ''} found`}
+                : showRefreshing
+                  ? `Updating… · ${events.length} event${events.length !== 1 ? 's' : ''} shown`
+                  : `${events.length} event${events.length !== 1 ? 's' : ''} found`}
             </p>
-            {showDemoHint && !isLoading && (
+            {showDemoHint && !showFullSkeleton && (
               <span
                 className="text-[0.6875rem] uppercase tracking-wider text-white/35 border border-white/10 rounded-full px-2.5 py-1"
                 title="Showing curated sample listings for this deploy"
@@ -356,7 +388,7 @@ export function SearchPage() {
           </div>
 
           {/* Grid */}
-          {isLoading ? (
+          {showFullSkeleton ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {[...Array(8)].map((_, i) => (
                 <div
@@ -380,7 +412,11 @@ export function SearchPage() {
               <p className="text-white/50">Try adjusting your search or filters</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div
+              className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 transition-opacity duration-200 ${
+                showRefreshing ? 'opacity-60' : 'opacity-100'
+              }`}
+            >
               {events.map((event) => (
                 <EventCard key={event.id} event={event} />
               ))}
