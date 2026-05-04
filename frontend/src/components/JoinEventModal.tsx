@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useUser, useIsLoggedIn, useAuthActions, PLATFORM_FEE_PERCENT } from '../state/authState';
 import { eventApi } from '../api/eventApi';
 import { paymentApi, openRazorpayCheckout } from '../api/paymentApi';
+import { isPortfolioDemoEventId } from '../data/demoEvents';
 import type { LiveEvent, TicketTier, QuestionResponse, PlusOne } from '../types/event';
 import { formatPrice, formatMoney, formatUSD, getUserCurrency, convertFromUSD } from '../utils/currency';
 
@@ -390,6 +391,39 @@ export function JoinEventModal({ event, isOpen, onClose, onSuccess }: JoinEventM
 
   if (!isOpen) return null;
 
+  if (isPortfolioDemoEventId(event.id)) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div
+          className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+          onClick={onClose}
+          aria-hidden
+        />
+        <div className="relative bg-zinc-900 rounded-3xl w-full max-w-md border border-white/10 shadow-2xl p-6">
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/70 hover:text-white"
+          >
+            ✕
+          </button>
+          <p className="text-white font-semibold text-lg pr-8">Frontend preview</p>
+          <p className="text-white/55 text-sm mt-3 leading-relaxed">
+            This portfolio build doesn’t include a live registration API. Connect your backend to enable
+            join flows and payments — nothing here processes real tickets or payouts.
+          </p>
+          <button
+            type="button"
+            onClick={onClose}
+            className="mt-6 w-full py-3 rounded-xl bg-white/10 border border-white/15 text-white font-medium hover:bg-white/15 transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // Access gate for protected events
   if ((isInviteOnly || isPasswordProtected) && !accessGranted) {
     return (
@@ -449,6 +483,8 @@ export function JoinEventModal({ event, isOpen, onClose, onSuccess }: JoinEventM
         <div className="relative h-24 overflow-hidden flex-shrink-0">
           {event.flyerUrl ? (
             <img src={event.flyerUrl} alt={event.name} className="w-full h-full object-cover" />
+          ) : event.backgroundUrl?.startsWith('linear-gradient') ? (
+            <div className="w-full h-full" style={{ backgroundImage: event.backgroundUrl }} />
           ) : (
             <div className="w-full h-full bg-gradient-to-r from-purple-600 to-pink-500" />
           )}

@@ -1,4 +1,6 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import { resolveApiBaseUrl } from '../config/apiBase';
+
+const API_URL = resolveApiBaseUrl();
 
 // Razorpay types
 declare global {
@@ -51,6 +53,9 @@ async function apiCall<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<ApiResponse<T>> {
+  if (!API_URL) {
+    return { success: false, error: 'API not configured' };
+  }
   try {
     const token = localStorage.getItem('lets_hang_token');
     

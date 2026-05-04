@@ -1,7 +1,15 @@
 import { mockCall } from './client';
+import { resolveApiBaseUrl, shouldPreferDemoCatalog } from '../config/apiBase';
+import {
+  filterDemoLiveEvents,
+  getAllDemoLiveEvents,
+  getDemoLiveEventById,
+  isPortfolioDemoEventId,
+} from '../data/demoEvents';
 import type { EventDraft, LiveEvent, Attendee, JoinRequest } from '../types/event';
+import type { SearchFilters } from '../types/catalogFilters';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_URL = resolveApiBaseUrl();
 
 const DEFAULT_GRADIENT =
   'linear-gradient(145deg, #7c3aed 0%, #a855f7 50%, #c084fc 100%)';
@@ -46,32 +54,45 @@ function applyPatch(current: EventDraft, patch: Partial<EventDraft>): EventDraft
 }
 
 // API helper
+const FETCH_TIMEOUT_MS = 8000;
+
 async function apiCall<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<{ ok: true; data: T } | { ok: false; error: string }> {
+  if (!API_URL) {
+    return { ok: false, error: 'API not configured' };
+  }
+  const token = localStorage.getItem('lets_hang_token');
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
-    const token = localStorage.getItem('lets_hang_token');
-    
     const response = await fetch(`${API_URL}${endpoint}`, {
       ...options,
+      signal: controller.signal,
       headers: {
         'Content-Type': 'application/json',
         ...(token && { Authorization: `Bearer ${token}` }),
         ...options.headers,
       },
     });
-    
+
     const data = await response.json();
-    
+
     if (!response.ok) {
       return { ok: false, error: data.message || 'Request failed' };
     }
-    
+
     return { ok: true, data };
   } catch (error) {
     console.error('API call failed:', error);
-    return { ok: false, error: 'Network error. Please check your connection.' };
+    const msg =
+      error instanceof Error && error.name === 'AbortError'
+        ? 'Request timed out'
+        : 'Network error. Please check your connection.';
+    return { ok: false, error: msg };
+  } finally {
+    window.clearTimeout(timeoutId);
   }
 }
 
@@ -122,10 +143,7 @@ function transformEvent(event: Record<string, unknown>): LiveEvent {
   };
 }
 
-export type SearchFilters = {
-  query?: string;
-  category?: LiveEvent['category'] | 'all';
-};
+export type { SearchFilters } from '../types/catalogFilters';
 
 export const eventApi = {
   // Draft management (local)
@@ -137,32 +155,55 @@ export const eventApi = {
       return db.draft;
     }),
 
-  // Get all live events from backend
-  getLiveEvents: async (filters?: SearchFilters): Promise<{ ok: true; data: LiveEvent[] } | { ok: false; error: string }> => {
+  // Get all live events from backend (falls back to local demo catalog when appropriate)
+  getLiveEvents: async (
+    filters?: SearchFilters,
+  ): Promise<{ ok: true; data: LiveEvent[] } | { ok: false; error: string }> => {
+    if (shouldPreferDemoCatalog()) {
+      const all = getAllDemoLiveEvents();
+      return { ok: true, data: filterDemoLiveEvents(all, filters) };
+    }
+
     const params = new URLSearchParams();
     if (filters?.query) params.append('search', filters.query);
     if (filters?.category && filters.category !== 'all') params.append('category', filters.category);
-    
-    const result = await apiCall<{ events: Record<string, unknown>[] }>(`/events?${params.toString()}`);
-    
-    if (!result.ok) return result;
-    
-    return {
-      ok: true,
-      data: result.data.events.map(transformEvent),
-    };
+
+    const result = await apiCall<{ events: Record<string, unknown>[] }>(
+      `/events?${params.toString()}`,
+    );
+
+    if (result.ok) {
+      return {
+        ok: true,
+        data: result.data.events.map(transformEvent),
+      };
+    }
+
+    const all = getAllDemoLiveEvents();
+    return { ok: true, data: filterDemoLiveEvents(all, filters) };
   },
 
   // Get single event by ID
   getEventById: async (id: string): Promise<{ ok: true; data: LiveEvent } | { ok: false; error: string }> => {
+    if (shouldPreferDemoCatalog()) {
+      const local = getDemoLiveEventById(id);
+      if (local) return { ok: true, data: local };
+      return { ok: false, error: 'Event not found' };
+    }
+
     const result = await apiCall<{ event: Record<string, unknown> }>(`/events/${id}`);
-    
-    if (!result.ok) return result;
-    
-    return {
-      ok: true,
-      data: transformEvent(result.data.event),
-    };
+
+    if (result.ok) {
+      return {
+        ok: true,
+        data: transformEvent(result.data.event),
+      };
+    }
+
+    const local = getDemoLiveEventById(id);
+    if (local) return { ok: true, data: local };
+
+    return result;
   },
 
   // Publish a new event
@@ -310,6 +351,10 @@ export const eventApi = {
 
   // Check user's status for an event
   getUserEventStatus: async (eventId: string, _userId: string): Promise<{ ok: true; data: { status: 'host' | 'joined' | 'pending' | 'none'; attendee?: Attendee } } | { ok: false; error: string }> => {
+    if (isPortfolioDemoEventId(eventId)) {
+      return { ok: true, data: { status: 'none' } };
+    }
+
     const result = await apiCall<{ status: 'host' | 'joined' | 'pending' | 'none'; attendee?: Record<string, unknown> }>(`/events/${eventId}/status`);
     
     if (!result.ok) return result;

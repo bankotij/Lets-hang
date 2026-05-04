@@ -1,8 +1,10 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { eventApi } from '../../api/eventApi';
 import type { SearchFilters } from '../../api/eventApi';
+import { shouldPreferDemoCatalog } from '../../config/apiBase';
 import type { LiveEvent } from '../../types/event';
+import { getCategoryCoverGradient } from '../../utils/categoryGradients';
 import { HeaderUserMenu } from '../../components/HeaderUserMenu';
 import { formatPrice } from '../../utils/currency';
 
@@ -15,6 +17,8 @@ const CATEGORIES = [
   { value: 'art', label: 'Art', emoji: '🎨' },
   { value: 'tech', label: 'Tech', emoji: '💻' },
   { value: 'social', label: 'Social', emoji: '👥' },
+  { value: 'workshop', label: 'Workshop', emoji: '🔧' },
+  { value: 'corporate', label: 'Corporate', emoji: '🏢' },
   { value: 'other', label: 'Other', emoji: '🌟' },
 ] as const;
 
@@ -34,6 +38,15 @@ function formatEventDate(dateString: string) {
 
 // Using formatPrice from currency utils
 
+function headerBackground(event: LiveEvent): CSSProperties {
+  if (event.flyerUrl) return {};
+  const g =
+    event.backgroundUrl?.startsWith('linear-gradient')
+      ? event.backgroundUrl
+      : getCategoryCoverGradient(event.category);
+  return { backgroundImage: g };
+}
+
 function EventCard({ event }: { event: LiveEvent }) {
   const capacityPercent = event.capacity
     ? Math.round((event.attendeeCount / event.capacity) * 100)
@@ -42,9 +55,9 @@ function EventCard({ event }: { event: LiveEvent }) {
   return (
     <Link
       to={`/event/${event.id}`}
-      className="group relative bg-zinc-900/80 backdrop-blur-sm rounded-2xl overflow-hidden border border-white/10 hover:border-white/30 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-purple-500/20"
+      className="group relative flex flex-col bg-zinc-900/80 backdrop-blur-sm rounded-2xl overflow-hidden border border-white/10 hover:border-white/30 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-purple-500/20"
     >
-      {/* Image */}
+      {/* Image / gradient */}
       <div className="relative aspect-[4/3] overflow-hidden">
         {event.flyerUrl ? (
           <img
@@ -53,7 +66,10 @@ function EventCard({ event }: { event: LiveEvent }) {
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
           />
         ) : (
-          <div className="w-full h-full bg-gradient-to-br from-purple-600 to-pink-500" />
+          <div
+            className="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
+            style={headerBackground(event)}
+          />
         )}
 
         {/* Top badges */}
@@ -61,8 +77,8 @@ function EventCard({ event }: { event: LiveEvent }) {
           <div className="flex gap-1.5">
             {/* Category badge */}
             <span className="px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-white text-xs font-medium border border-white/20">
-              {CATEGORIES.find((c) => c.value === event.category)?.emoji}{' '}
-              {CATEGORIES.find((c) => c.value === event.category)?.label}
+              {CATEGORIES.find((c) => c.value === event.category)?.emoji ?? '✨'}{' '}
+              {CATEGORIES.find((c) => c.value === event.category)?.label ?? event.category}
             </span>
             {/* Privacy badge */}
             {event.isPrivate && (
@@ -162,6 +178,18 @@ function EventCard({ event }: { event: LiveEvent }) {
             ))}
           </div>
         )}
+
+        <div className="mt-5 flex items-center justify-between border-t border-white/10 pt-4">
+          <span className="text-sm font-semibold text-purple-300/95 group-hover:text-purple-200 transition-colors">
+            View event
+          </span>
+          <span
+            className="text-purple-400/80 group-hover:translate-x-0.5 transition-transform"
+            aria-hidden
+          >
+            →
+          </span>
+        </div>
       </div>
 
       {/* Hover glow effect */}
@@ -179,6 +207,8 @@ export function SearchPage() {
   const [selectedCategory, setSelectedCategory] = useState<SearchFilters['category']>('all');
   const [debouncedQuery, setDebouncedQuery] = useState('');
 
+  const showDemoHint = shouldPreferDemoCatalog();
+
   // Debounce search query
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -187,20 +217,28 @@ export function SearchPage() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Fetch events
+  // Fetch events (demo path resolves immediately; API path may take longer)
   useEffect(() => {
+    let cancelled = false;
+
     async function fetchEvents() {
       setIsLoading(true);
       const result = await eventApi.getLiveEvents({
         query: debouncedQuery,
         category: selectedCategory,
       });
+      if (cancelled) return;
       if (result.ok) {
         setEvents(result.data);
+      } else {
+        setEvents([]);
       }
       setIsLoading(false);
     }
     fetchEvents();
+    return () => {
+      cancelled = true;
+    };
   }, [debouncedQuery, selectedCategory]);
 
   const pageStyle = useMemo<React.CSSProperties>(() => ({
@@ -301,10 +339,20 @@ export function SearchPage() {
         {/* Results */}
         <main className="px-8 pb-16 max-w-7xl mx-auto">
           {/* Results count */}
-          <div className="mb-6 flex items-center justify-between">
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
             <p className="text-white/50 text-sm">
-              {isLoading ? 'Searching...' : `${events.length} event${events.length !== 1 ? 's' : ''} found`}
+              {isLoading
+                ? 'Loading events…'
+                : `${events.length} event${events.length !== 1 ? 's' : ''} found`}
             </p>
+            {showDemoHint && !isLoading && (
+              <span
+                className="text-[0.6875rem] uppercase tracking-wider text-white/35 border border-white/10 rounded-full px-2.5 py-1"
+                title="Showing curated sample listings for this deploy"
+              >
+                Demo data
+              </span>
+            )}
           </div>
 
           {/* Grid */}

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { eventApi } from '../../api/eventApi';
+import { isPortfolioDemoEventId } from '../../data/demoEvents';
 import type { LiveEvent, Attendee } from '../../types/event';
 import { CANCELLATION_FEE_PERCENT } from '../../types/event';
 import { HeaderUserMenu } from '../../components/HeaderUserMenu';
@@ -221,6 +222,17 @@ export function EventDetailPage() {
 
   function getActionButton() {
     if (!event) return null;
+
+    if (isPortfolioDemoEventId(event.id)) {
+      return (
+        <div className="w-full rounded-2xl border border-white/15 bg-white/5 px-5 py-4 text-center">
+          <p className="text-white/90 font-medium">Portfolio demo</p>
+          <p className="text-white/50 text-sm mt-1.5 leading-relaxed">
+            Read-only preview — connect the API for registration. No payments or payouts run in this mode.
+          </p>
+        </div>
+      );
+    }
 
     // Show cancel message if present
     if (cancelMessage) {
@@ -586,6 +598,12 @@ export function EventDetailPage() {
             </div>
           ) : event ? (
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-10">
+              {isPortfolioDemoEventId(event.id) && (
+                <div className="lg:col-span-2 rounded-xl border border-amber-500/25 bg-amber-500/5 px-4 py-3 text-amber-100/90 text-sm">
+                  <span className="font-medium text-amber-200/95">Demo content</span>
+                  <span className="text-amber-100/70"> · curated for screenshots — not live registration.</span>
+                </div>
+              )}
               {/* Left - Image & Details */}
               <div className="space-y-6">
                 {/* Flyer Image */}
@@ -596,6 +614,13 @@ export function EventDetailPage() {
                       alt={event.name}
                       className="w-full h-full object-cover"
                     />
+                  ) : event.backgroundUrl?.startsWith('linear-gradient') ? (
+                    <div
+                      className="w-full h-full flex items-center justify-center"
+                      style={{ backgroundImage: event.backgroundUrl }}
+                    >
+                      <span className="text-8xl drop-shadow-lg">{categoryInfo?.emoji}</span>
+                    </div>
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center">
                       <span className="text-8xl">{categoryInfo?.emoji}</span>
